@@ -9,9 +9,9 @@
     "start": "node server.js --open",
     "desktop": "electron .",
     "icon": "electron desktop/make-icon.js",
-    "dist": "electron-builder --win",
-    "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
   },
   "engines": {
     "node": ">=18"
@@ -44,6 +44,7 @@
       "icon": "desktop/icon.png",
       "category": "public.app-category.music",
       "identity": "-",
+      "hardenedRuntime": false,
       "artifactName": "RadioPlayer-${version}-mac-${arch}.${ext}"
     },
     "dmg": {
