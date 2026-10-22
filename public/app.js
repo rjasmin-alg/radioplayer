@@ -159,6 +159,7 @@ const player = {
       el.addEventListener('waiting', () => { if (el === this.el) $('#p-title').textContent = 'Spajam…'; });
     }
     this.setVolume(state.settings.volume);
+    new MutationObserver(() => this.syncTitle()).observe($('#p-title'), { childList: true, characterData: true, subtree: true });
     if ('mediaSession' in navigator) {
       navigator.mediaSession.setActionHandler('play', () => this.toggle());
       navigator.mediaSession.setActionHandler('pause', () => this.toggle());
@@ -329,6 +330,13 @@ const player = {
     const playing = this.kiwiActive ? scanner.kiwi.connected : !!(this.el && !this.el.paused);
     $('#p-play').textContent = playing ? '⏸' : '▶';
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+    this.syncTitle();
+  },
+
+  // naslov kartice / prozora (desktop verzija ga prikazuje i na ikoni u traci)
+  syncTitle() {
+    const playing = this.kiwiActive ? scanner.kiwi.connected : !!(this.el && !this.el.paused);
+    document.title = playing ? `${$('#p-name').textContent} – ${$('#p-title').textContent}` : 'RadioPlayer';
   },
 
   showKiwi(name, title) {
