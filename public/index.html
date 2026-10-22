@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RadioPlayer</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="brand"><img src="icon.svg" alt=""><span>RadioPlayer</span></div>
+    <button class="nav active" data-view="local">📍 <span>Lokalno</span></button>
+    <button class="nav" data-view="search">🔎 <span>Pretraga</span></button>
+    <button class="nav" data-view="genres">🎵 <span>Žanrovi</span></button>
+    <button class="nav" data-view="map">🗺️ <span>Karta stanica</span></button>
+    <button class="nav" data-view="sdr">📡 <span>WebSDR</span></button>
+    <button class="nav" data-view="scanner">📻 <span>Skener</span></button>
+    <button class="nav" data-view="favorites">★ <span>Favoriti</span></button>
+    <button class="nav" data-view="settings">⚙️ <span>Postavke</span></button>
+  </nav>
+
+  <main class="content">
+    <!-- LOKALNO -->
+    <section class="view active" id="view-local">
+      <header class="view-head">
+        <h1>Lokalne stanice</h1>
+        <div class="filters">
+          <select id="local-country" title="Država"></select>
+          <select id="local-state" title="Regija"><option value="">Sve regije</option></select>
+          <select id="local-order">
+            <option value="votes">Najpopularnije</option>
+            <option value="clickcount">Najslušanije</option>
+            <option value="name">Po imenu</option>
+            <option value="bitrate">Po kvaliteti</option>
+          </select>
+          <input id="local-filter" type="search" placeholder="Filtriraj…">
+        </div>
+      </header>
+      <div class="list" id="local-list"></div>
+    </section>
+
+    <!-- PRETRAGA -->
+    <section class="view" id="view-search">
+      <header class="view-head">
+        <h1>Pretraga stanica</h1>
+        <form class="filters" id="search-form">
+          <input id="s-name" type="search" placeholder="Ime stanice…">
+          <select id="s-country"><option value="">Sve države</option></select>
+          <input id="s-tag" list="tag-list" placeholder="Žanr / oznaka">
+          <input id="s-language" placeholder="Jezik (npr. croatian)">
+          <select id="s-codec">
+            <option value="">Svi kodeci</option><option>MP3</option><option>AAC</option><option>AAC+</option><option>OGG</option><option>FLAC</option>
+          </select>
+          <select id="s-bitrate">
+            <option value="0">Bilo koja kvaliteta</option><option value="96">≥ 96 kbps</option><option value="128">≥ 128 kbps</option><option value="192">≥ 192 kbps</option><option value="320">≥ 320 kbps</option>
+          </select>
+          <select id="s-order">
+            <option value="votes">Najpopularnije</option><option value="clickcount">Najslušanije</option><option value="clicktrend">U trendu</option><option value="name">Po imenu</option><option value="random">Nasumično</option>
+          </select>
+          <button class="btn primary" type="submit">Traži</button>
+        </form>
+        <datalist id="tag-list"></datalist>
+      </header>
+      <div class="list" id="search-list"><p class="hint">Upiši pojam ili odaberi filter. Sve stanice iz baze <a href="https://www.radio-browser.info" target="_blank" rel="noopener">radio-browser.info</a> su besplatne.</p></div>
+    </section>
+
+    <!-- ŽANROVI -->
+    <section class="view" id="view-genres">
+      <header class="view-head">
+        <h1>Žanrovi</h1>
+        <div class="filters">
+          <select id="g-country"><option value="">Cijeli svijet</option></select>
+          <input id="g-filter" type="search" placeholder="Pronađi žanr…">
+        </div>
+      </header>
+      <div class="genre-grid" id="genre-grid"></div>
+      <h2 class="sub">Sve oznake</h2>
+      <div class="chips" id="tag-chips"></div>
+      <h2 class="sub" id="genre-title" hidden></h2>
+      <div class="list" id="genre-list"></div>
+    </section>
+
+    <!-- KARTA -->
+    <section class="view" id="view-map">
+      <header class="view-head">
+        <h1>Karta stanica</h1>
+        <div class="filters">
+          <select id="m-country"><option value="">Cijeli svijet (top 5000)</option></select>
+          <input id="m-tag" list="tag-list" placeholder="Žanr (opcionalno)">
+          <button class="btn" id="m-load">Prikaži</button>
+          <span class="muted" id="m-count"></span>
+        </div>
+      </header>
+      <div class="map" id="station-map"></div>
+      <p class="hint">Na karti su samo stanice koje u bazi imaju upisane koordinate.</p>
+    </section>
+
+    <!-- SDR -->
+    <section class="view" id="view-sdr">
+      <header class="view-head">
+        <h1>WebSDR prijemnici</h1>
+        <div class="filters">
+          <input id="sdr-q" type="search" placeholder="Ime, mjesto, antena, pojas…">
+          <select id="sdr-type">
+            <option value="">Svi tipovi</option><option>KiwiSDR</option><option>OpenWebRX</option><option>WebSDR</option>
+          </select>
+          <select id="sdr-band">
+            <option value="">Svi pojasevi</option>
+            <option value="hf">KV / HF (do 30 MHz)</option>
+            <option value="vhf">VHF / UHF (airband, 2m, 70cm, PMR…)</option>
+          </select>
+          <label class="check"><input type="checkbox" id="sdr-free" checked> Samo slobodni</label>
+          <select id="sdr-sort"><option value="dist">Najbliži</option><option value="name">Po imenu</option><option value="users">Najmanje zauzeti</option></select>
+          <div class="seg"><button class="seg-btn active" data-sdrmode="list">Popis</button><button class="seg-btn" data-sdrmode="map">Karta</button></div>
+          <button class="btn" id="sdr-refresh" title="Ponovno dohvati popise">⟳</button>
+        </div>
+      </header>
+      <p class="muted" id="sdr-status">Učitavam popis prijemnika…</p>
+      <div class="map" id="sdr-map" hidden></div>
+      <div class="list" id="sdr-list"></div>
+      <p class="hint">Izvori: <a href="http://kiwisdr.com/public/" target="_blank" rel="noopener">kiwisdr.com</a> (preko rx.linkfanel.net) i <a href="https://www.receiverbook.de" target="_blank" rel="noopener">receiverbook.de</a>.
+        Klasični popis s <a href="http://websdr.org" target="_blank" rel="noopener">websdr.org</a> ne smije se automatski preuzimati, pa ga otvori izravno: <a href="http://websdr.org" target="_blank" rel="noopener">websdr.org ↗</a></p>
+    </section>
+
+    <!-- SKENER -->
+    <section class="view" id="view-scanner">
+      <header class="view-head"><h1>Skener</h1></header>
+      <div class="scanner-grid">
+        <div class="panel tuner">
+          <h2>KiwiSDR tuner <span class="badge" id="k-state">nije spojen</span></h2>
+          <div class="row">
+            <input id="k-url" placeholder="http://adresa-kiwisdr:8073" list="kiwi-recent">
+            <datalist id="kiwi-recent"></datalist>
+            <button class="btn" id="k-near">Najbliži slobodni</button>
+            <button class="btn primary" id="k-connect">Spoji</button>
+          </div>
+          <p class="muted small" id="k-name"></p>
+          <div class="freq-display">
+            <input id="k-freq" type="number" step="0.01" min="0" max="32000" value="6070.00"><span>kHz</span>
+            <select id="k-mode">
+              <option value="am">AM</option><option value="amn">AM uski</option><option value="usb">USB</option><option value="lsb">LSB</option><option value="cw">CW</option><option value="nbfm">NBFM</option>
+            </select>
+          </div>
+          <div class="row step-row">
+            <button class="btn" data-step="-10">−10</button><button class="btn" data-step="-5">−5</button><button class="btn" data-step="-1">−1</button><button class="btn" data-step="-0.1">−0.1</button>
+            <button class="btn" data-step="0.1">+0.1</button><button class="btn" data-step="1">+1</button><button class="btn" data-step="5">+5</button><button class="btn" data-step="10">+10</button>
+          </div>
+          <div class="smeter"><div class="smeter-bar" id="k-smeter-bar"></div><div class="smeter-thr" id="k-thr-mark"></div><span id="k-smeter">— dBm</span></div>
+          <div class="row">
+            <label class="check"><input type="checkbox" id="k-squelch"> Squelch</label>
+            <label class="range">Prag <input type="range" id="k-thr" min="-130" max="-40" value="-100"> <span id="k-thr-val">-100</span> dBm</label>
+          </div>
+          <div class="row">
+            <label class="range">Glasnoća <input type="range" id="k-vol" min="0" max="1" step="0.01" value="0.8"></label>
+            <button class="btn" id="k-save">+ Spremi u memoriju</button>
+          </div>
+          <h3>Skeniranje</h3>
+          <div class="row">
+            <select id="scan-src">
+              <option value="mem">Memorije (popis desno)</option>
+              <option value="range">Raspon frekvencija</option>
+            </select>
+            <span id="scan-range" hidden>
+              <input id="scan-from" type="number" value="5900" step="1"> –
+              <input id="scan-to" type="number" value="6200" step="1"> kHz, korak
+              <input id="scan-step" type="number" value="5" step="0.5"> kHz
+            </span>
+          </div>
+          <div class="row">
+            <label class="range">Zadržavanje <input id="scan-dwell" type="number" value="1.5" step="0.5" min="0.5"> s</label>
+            <label class="range">Čekanje nakon signala <input id="scan-hang" type="number" value="4" step="1" min="0"> s</label>
+            <button class="btn primary" id="scan-btn">▶ Skeniraj</button>
+          </div>
+          <p class="muted small">Skener staje na frekvenciji kad signal prijeđe prag. KiwiSDR pokriva 0–30 MHz (KV). Za VHF/UHF (zračni promet, repetitori) koristi OpenWebRX prijemnike s popisa „VHF / UHF“ u WebSDR kartici.</p>
+        </div>
+
+        <div class="panel">
+          <h2>Memorije</h2>
+          <div class="row"><select id="mem-group"></select></div>
+          <div class="mem-list" id="mem-list"></div>
+        </div>
+
+        <div class="panel wide">
+          <h2>Streamovi skenera</h2>
+          <p class="muted small">Gotovi audio streamovi: kontrola leta (LiveATC), policija/vatrogasci (preko radio-browser baze) i vlastiti streamovi.</p>
+          <div class="chips" id="scanner-chips"></div>
+          <div class="list" id="scanner-list"></div>
+          <p class="hint">Još izvora (otvaraju se u pregledniku): <a href="https://www.liveatc.net" target="_blank" rel="noopener">LiveATC</a> · <a href="https://www.broadcastify.com/listen/" target="_blank" rel="noopener">Broadcastify</a> · <a href="https://openmhz.com" target="_blank" rel="noopener">OpenMHz</a> · <a href="https://www.radioreference.com" target="_blank" rel="noopener">RadioReference</a></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAVORITI -->
+    <section class="view" id="view-favorites">
+      <header class="view-head"><h1>Favoriti</h1></header>
+      <h2 class="sub">Stanice</h2>
+      <div class="list" id="fav-list"></div>
+      <h2 class="sub">SDR prijemnici</h2>
+      <div class="list" id="fav-sdr-list"></div>
+      <h2 class="sub">Dodaj vlastiti stream</h2>
+      <form class="filters" id="custom-form">
+        <input id="c-name" placeholder="Naziv" required>
+        <input id="c-url" placeholder="URL streama (mp3/aac/m3u8/pls)" required size="40">
+        <input id="c-tags" placeholder="Oznake (npr. scanner, jazz)">
+        <button class="btn primary">Dodaj</button>
+      </form>
+      <h2 class="sub">Nedavno slušano</h2>
+      <div class="list" id="history-list"></div>
+    </section>
+
+    <!-- POSTAVKE -->
+    <section class="view" id="view-settings">
+      <header class="view-head"><h1>Postavke</h1></header>
+      <div class="panel settings">
+        <label>Moja država (za lokalne stanice) <select id="set-country"></select></label>
+        <label>Moja lokacija (za udaljenost SDR-ova)
+          <span class="row"><input id="set-lat" type="number" step="0.0001" placeholder="širina"> <input id="set-lon" type="number" step="0.0001" placeholder="dužina">
+          <button class="btn" id="set-geo" type="button">Odredi automatski</button></span>
+        </label>
+        <label class="check"><input type="checkbox" id="set-proxy"> Reproduciraj preko lokalnog proxyja (omogućuje vizualizator; preporučeno)</label>
+        <label class="check"><input type="checkbox" id="set-viz"> Prikaži vizualizator spektra</label>
+        <div class="row">
+          <button class="btn" id="set-export" type="button">Izvezi favorite</button>
+          <label class="btn">Uvezi favorite <input type="file" id="set-import" accept=".json" hidden></label>
+        </div>
+        <p class="muted small">Podaci (favoriti, memorije, postavke) spremaju se u mapu <code>data</code> pored aplikacije.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- PLAYER -->
+  <footer class="player">
+    <img id="p-logo" class="p-logo" src="icon.svg" alt="">
+    <div class="p-info">
+      <div class="p-name" id="p-name">Ništa ne svira</div>
+      <div class="p-title" id="p-title">Odaberi stanicu</div>
+    </div>
+    <canvas id="viz" width="300" height="48"></canvas>
+    <div class="p-controls">
+      <button class="icon-btn" id="p-prev" title="Prethodni favorit">⏮</button>
+      <button class="icon-btn big" id="p-play" title="Sviraj / pauza (razmaknica)">▶</button>
+      <button class="icon-btn" id="p-next" title="Sljedeći favorit">⏭</button>
+      <button class="icon-btn" id="p-fav" title="Dodaj u favorite">☆</button>
+      <input type="range" id="p-vol" min="0" max="1" step="0.01" value="0.8" title="Glasnoća">
+      <select id="p-sleep" title="Automatsko gašenje">
+        <option value="0">⏾ isključeno</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">60 min</option><option value="90">90 min</option>
+      </select>
+    </div>
+  </footer>
+</div>
+
+<!-- SDR u ugrađenom prozoru -->
+<div class="modal" id="sdr-modal" hidden>
+  <div class="modal-bar">
+    <strong id="sdr-modal-title"></strong>
+    <span class="spacer"></span>
+    <a class="btn" id="sdr-modal-ext" target="_blank" rel="noopener">Otvori u novom prozoru ↗</a>
+    <button class="btn" id="sdr-modal-close">✕ Zatvori</button>
+  </div>
+  <iframe id="sdr-frame" allow="autoplay; microphone" referrerpolicy="no-referrer"></iframe>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<audio id="audio" preload="none"></audio>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<script src="kiwi.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

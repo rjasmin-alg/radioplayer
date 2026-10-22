@@ -1,0 +1,62 @@
+{
+  "name": "radioplayer",
+  "version": "1.0.0",
+  "description": "Lokalni player za internetski radio i WebSDR prijemnike",
+  "author": "Jasmin",
+  "main": "desktop/main.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js --open",
+    "desktop": "electron .",
+    "icon": "electron desktop/make-icon.js",
+    "dist": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "build": {
+    "appId": "hr.radioplayer.app",
+    "productName": "RadioPlayer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "server.js",
+      "public/**",
+      "desktop/main.js",
+      "desktop/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "desktop/icon.png"
+    },
+    "portable": {
+      "artifactName": "RadioPlayer-${version}.exe"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
+      "icon": "desktop/icon.png",
+      "category": "public.app-category.music",
+      "identity": "-",
+      "artifactName": "RadioPlayer-${version}-mac-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "RadioPlayer"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "desktop/icon.png",
+      "category": "Audio"
+    }
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.15.3"
+  }
+}

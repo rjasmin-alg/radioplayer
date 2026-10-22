@@ -1,0 +1,39 @@
+# Gradi desktop verzije na GitHubovim računalima: macOS (.dmg/.zip, Apple Silicon i Intel) i Windows (.exe).
+# Pokretanje: GitHub → Actions → "Build" → Run workflow, ili push oznake v* (npr. v1.0.0).
+# Gotove datoteke su pod "Artifacts" na stranici izvršavanja.
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            script: dist:mac
+            files: |
+              dist/*.dmg
+              dist/*.zip
+          - os: windows-latest
+            script: dist
+            files: dist/*.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RadioPlayer-${{ runner.os }}
+          path: ${{ matrix.files }}
