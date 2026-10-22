@@ -8,6 +8,8 @@ Nema vanjskih ovisnosti – treba samo [Node.js](https://nodejs.org) 18 ili novi
 `dist\RadioPlayer-1.0.0.exe` je samostalna aplikacija: jedna datoteka, bez instalacije i bez Node.js-a.
 Dvoklik otvara vlastiti prozor; ništa ne ostaje raditi u pozadini nakon zatvaranja.
 
+- Minimiziranje skriva prozor u traku sa satom; radio nastavlja svirati. Klik na ikonu vraća prozor,
+  desni klik nudi sviraj/pauza, sljedeći favorit i izlaz. Zatvaranje prozora (✕) gasi aplikaciju.
 - Podaci (favoriti, memorije, postavke) su u `%APPDATA%\radioplayer\data`.
 - Exe nije digitalno potpisan, pa Windows SmartScreen pri prvom pokretanju može pitati
   „Više informacija → Ipak pokreni“.
