@@ -224,6 +224,15 @@
         </label>
         <label class="check"><input type="checkbox" id="set-proxy"> Reproduciraj preko lokalnog proxyja (omogućuje vizualizator; preporučeno)</label>
         <label class="check"><input type="checkbox" id="set-viz"> Prikaži vizualizator spektra</label>
+        <label>Audio izlaz (zvučna kartica)
+          <span class="row">
+            <select id="set-audio-out"><option value="">Zadano (izlaz sustava)</option></select>
+            <button class="btn" id="set-audio-refresh" type="button" title="Ponovno pročitaj uređaje">⟳</button>
+            <button class="btn" id="set-audio-perm" type="button" hidden>Prikaži nazive uređaja</button>
+          </span>
+          <span class="muted small" id="set-audio-status"></span>
+          <span class="muted small">Vrijedi za radio stanice, streamove skenera i KiwiSDR tuner. SDR stranice otvorene unutar aplikacije (OpenWebRX, WebSDR) koriste zadani izlaz sustava.</span>
+        </label>
         <div class="row">
           <button class="btn" id="set-export" type="button">Izvezi favorite</button>
           <label class="btn">Uvezi favorite <input type="file" id="set-import" accept=".json" hidden></label>

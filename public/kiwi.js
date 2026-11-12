@@ -21,6 +21,13 @@ class KiwiClient {
     this.onstatus = () => {};
     this.onsmeter = () => {};
     this.keepalive = null;
+    this.sinkId = '';
+  }
+
+  // audio izlaz ('' = zadani izlaz sustava)
+  setSinkId(id) {
+    this.sinkId = id;
+    if (this.ctx && this.ctx.setSinkId) return this.ctx.setSinkId(id).catch(() => {});
   }
 
   get connected() { return this.ws && this.ws.readyState === WebSocket.OPEN; }
@@ -32,7 +39,7 @@ class KiwiClient {
     const wsUrl = `${u.protocol === 'https:' ? 'wss' : 'ws'}://${u.host}/kiwi/${Date.now()}/SND`;
 
     if (!this.ctx) {
-      this.ctx = new AudioContext();
+      this.ctx = new AudioContext(this.sinkId ? { sinkId: this.sinkId } : {});
       this.gain = this.ctx.createGain();
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 256;

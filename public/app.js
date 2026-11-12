@@ -171,7 +171,7 @@ const player = {
 
   ensureAudioGraph() {
     if (this.ctx) return;
-    this.ctx = new AudioContext();
+    this.ctx = new AudioContext(audioOut.sinkId ? { sinkId: audioOut.sinkId } : {});
     const src = this.ctx.createMediaElementSource(this.elA);
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 256;
@@ -872,6 +872,87 @@ function renderFavorites() {
   } else { $('#custom-list')?.remove(); $('#custom-title')?.remove(); }
 }
 
+// ---------- AUDIO IZLAZ ----------
+
+const audioOut = {
+  sinkId: '',           // uređaj koji se trenutno koristi ('' = zadani izlaz sustava)
+  devices: [],
+  warned: false,
+
+  async init() {
+    const sel = $('#set-audio-out');
+    if (!('setSinkId' in HTMLMediaElement.prototype) || !navigator.mediaDevices?.enumerateDevices) {
+      sel.disabled = true; $('#set-audio-refresh').hidden = true;
+      $('#set-audio-status').textContent = 'Ovaj preglednik ne podržava odabir audio izlaza.';
+      return;
+    }
+    sel.onchange = () => {
+      if (sel.value === '__missing') return;
+      const d = this.devices.find((x) => x.deviceId === sel.value);
+      state.settings.audioOut = d ? { id: d.deviceId, label: d.label } : null;
+      save('settings');
+      $('#sel-audio-missing')?.remove();
+      $('#set-audio-status').textContent = '';
+      this.sinkId = d ? d.deviceId : '';
+      this.apply();
+    };
+    $('#set-audio-refresh').onclick = () => this.refresh();
+    $('#set-audio-perm').onclick = async () => {
+      // preglednik otkriva nazive zvučnih kartica tek nakon dozvole za mikrofon; mikrofon se odmah zatvara
+      try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop()); }
+      catch { toast('Bez dozvole preglednik ne otkriva nazive zvučnih kartica.'); }
+      this.refresh();
+    };
+    navigator.mediaDevices.addEventListener('devicechange', () => this.refresh());
+    await this.refresh();
+  },
+
+  async refresh() {
+    const all = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+    // 'default' i 'communications' su samo zamjenska imena za uređaje sustava
+    this.devices = all.filter((d) => d.kind === 'audiooutput' && d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications');
+    const named = this.devices.length > 0 && this.devices.every((d) => d.label);
+    $('#set-audio-perm').hidden = named;
+
+    const sel = $('#set-audio-out');
+    sel.innerHTML = '<option value="">Zadano (izlaz sustava)</option>'
+      + this.devices.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || 'Uređaj ' + (i + 1))}</option>`).join('');
+
+    // ID uređaja se mijenja (drugi port desktop verzije, ponovno spajanje kartice), pa tražimo i po nazivu
+    const saved = state.settings.audioOut;
+    const match = saved && (this.devices.find((d) => d.deviceId === saved.id) || this.devices.find((d) => d.label && d.label === saved.label));
+    const status = $('#set-audio-status');
+    if (match) {
+      if (saved.id !== match.deviceId) { saved.id = match.deviceId; save('settings'); }
+      sel.value = match.deviceId;
+      this.sinkId = match.deviceId;
+      status.textContent = '';
+      this.warned = false;
+    } else if (saved) {
+      sel.insertAdjacentHTML('beforeend', `<option id="sel-audio-missing" value="__missing">${esc(saved.label || 'Odabrani uređaj')} (nije pronađen)</option>`);
+      sel.value = '__missing';
+      this.sinkId = '';
+      status.textContent = named
+        ? 'Odabrani uređaj nije spojen – zvuk ide na zadani izlaz dok se ne spoji.'
+        : 'Klikni „Prikaži nazive uređaja“ da aplikacija pronađe odabranu zvučnu karticu.';
+      if (!this.warned && named) { this.warned = true; toast(`Zvučna kartica „${saved.label}“ nije spojena – koristim zadani izlaz.`); }
+    } else {
+      sel.value = '';
+      this.sinkId = '';
+      status.textContent = '';
+    }
+    this.apply();
+  },
+
+  apply() {
+    const id = this.sinkId;
+    const fail = () => toast('Ne mogu prebaciti zvuk na odabrani uređaj.');
+    for (const el of [player.elA, player.elB]) el.setSinkId(id).catch(fail);
+    if (player.ctx && player.ctx.setSinkId) player.ctx.setSinkId(id).catch(fail);
+    scanner.kiwi.setSinkId(id);
+  },
+};
+
 // ---------- POSTAVKE ----------
 
 function initSettings() {
@@ -928,6 +1009,7 @@ async function main() {
   player.init();
   scanner.init();
   initSettings();
+  audioOut.init();
   requestAnimationFrame(drawViz);
 
   $$('.nav').forEach((b) => { b.onclick = () => showView(b.dataset.view); });

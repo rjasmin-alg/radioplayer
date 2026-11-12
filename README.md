@@ -75,6 +75,12 @@ Web i desktop verzija koriste isti kod (`server.js` + `public/`), ali odvojene p
 | **Skener** | Ugrađeni KiwiSDR tuner (0–30 MHz) sa S-metrom, squelchom, memorijama i skeniranjem (memorije ili raspon frekvencija). Streamovi kontrole leta (LiveATC), policije/vatrogasaca i vlastiti streamovi |
 | **Favoriti** | Omiljene stanice i SDR-ovi, vlastiti streamovi, povijest slušanja |
 
+**Audio izlaz:** u Postavkama se bira zvučna kartica (ili „Zadano“). Aplikacija pamti odabir i
+uvijek koristi tu karticu; ako nije spojena, svira na zadanom izlazu i sama se vrati na nju kad se spoji.
+Desktop verzija odmah prikazuje nazive kartica, a web verzija tek nakon klika na „Prikaži nazive uređaja“
+(preglednik ih otkriva tek uz dozvolu za mikrofon; mikrofon se ne koristi). SDR stranice otvorene unutar
+aplikacije (OpenWebRX, WebSDR) idu na zadani izlaz sustava.
+
 Player traka: vizualizator spektra, „trenutno svira“ (ICY metapodaci), automatsko gašenje,
 tipke za medije u Windowsima, razmaknica za play/pauzu.
 

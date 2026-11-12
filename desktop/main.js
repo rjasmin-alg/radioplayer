@@ -3,7 +3,7 @@
 // Minimiziranje skriva prozor u traku sa satom (macOS: traka izbornika); zatvaranje gasi aplikaciju.
 'use strict';
 
-const { app, BrowserWindow, shell, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, shell, Menu, Tray, nativeImage, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -55,6 +55,12 @@ if (!app.requestSingleInstanceLock()) {
       : null);
     const { start } = require('../server.js');
     const url = await start({ port: 0, dataDir: path.join(app.getPath('userData'), 'data') });
+
+    // nazivi zvučnih kartica (odabir audio izlaza) vidljivi su samo uz dozvolu "media";
+    // dajemo je samo vlastitom sučelju, ostale provjere ostaju kao i prije (dopuštene)
+    const appOrigin = new URL(url).origin;
+    session.defaultSession.setPermissionCheckHandler((_wc, permission, requestingOrigin) =>
+      permission !== 'media' || requestingOrigin === appOrigin);
 
     let bounds = { width: 1280, height: 820 };
     try { bounds = { ...bounds, ...JSON.parse(fs.readFileSync(stateFile(), 'utf8')) }; } catch {}
