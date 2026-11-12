@@ -1,6 +1,6 @@
 {
   "name": "radioplayer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lokalni player za internetski radio i WebSDR prijemnike",
   "author": "Jasmin",
   "main": "desktop/main.js",
@@ -38,8 +38,20 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["arm64", "x64"] },
-        { "target": "zip", "arch": ["arm64", "x64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "icon": "desktop/icon.png",
       "category": "public.app-category.music",
