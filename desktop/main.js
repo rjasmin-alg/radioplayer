@@ -1,6 +1,7 @@
 // RadioPlayer – desktop verzija (Electron). Poslužitelj radi unutar istog procesa,
 // na slučajnom portu dostupnom samo ovom računalu, i gasi se zajedno s aplikacijom.
-// Minimiziranje skriva prozor u traku sa satom (macOS: traka izbornika); zatvaranje gasi aplikaciju.
+// Minimiziranje skriva prozor u traku sa satom (macOS: traka izbornika; Linux: samo ako traka postoji);
+// zatvaranje gasi aplikaciju.
 'use strict';
 
 const { app, BrowserWindow, shell, Menu, Tray, nativeImage, session } = require('electron');
@@ -14,7 +15,19 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   let win, tray;
   let trayHintShown = false;
+  // Windows/macOS uvijek imaju traku sa satom. Na Linuxu ikona u traci postoji samo ako radna
+  // površina ima StatusNotifier host (KDE, Cinnamon, XFCE, Ubuntu GNOME s AppIndicator proširenjem);
+  // čisti GNOME ga nema, pa bi skriveni prozor ostao nedostupan – tamo minimiziranje ostaje obično.
+  let hideOnMinimize = process.platform !== 'linux';
   const stateFile = () => path.join(app.getPath('userData'), 'window.json');
+
+  function linuxTrayAvailable() {
+    return new Promise((resolve) => {
+      require('child_process').execFile('gdbus', ['call', '--session', '--dest', 'org.freedesktop.DBus',
+        '--object-path', '/org/freedesktop/DBus', '--method', 'org.freedesktop.DBus.NameHasOwner',
+        'org.kde.StatusNotifierWatcher'], { timeout: 2000 }, (err, out) => resolve(!err && /true/.test(out)));
+    });
+  }
 
   function showWindow() {
     if (!win) return;
@@ -49,6 +62,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', showWindow);
 
   app.whenReady().then(async () => {
+    if (process.platform === 'linux') hideOnMinimize = await linuxTrayAvailable();
     // macOS treba izbornik aplikacije (Cmd+Q, Cmd+C/V u poljima); Windows/Linux ga ne prikazuju
     Menu.setApplicationMenu(process.platform === 'darwin'
       ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }])
@@ -88,7 +102,7 @@ if (!app.requestSingleInstanceLock()) {
       if (!target.startsWith(url)) { e.preventDefault(); shell.openExternal(target); }
     });
 
-    win.on('minimize', hideToTray);
+    win.on('minimize', () => { if (hideOnMinimize) hideToTray(); });
     win.on('page-title-updated', (_, title) => tray.setToolTip(title.slice(0, 127)));
 
     win.on('close', () => {

@@ -1,4 +1,5 @@
-# Gradi desktop verzije na GitHubovim računalima: macOS (.dmg/.zip, Apple Silicon i Intel) i Windows (.exe).
+# Gradi desktop verzije na GitHubovim računalima: macOS (.dmg/.zip, Apple Silicon i Intel), Windows (.exe)
+# i Linux (.AppImage i .deb, x64).
 # Pokretanje: GitHub → Actions → "Build" → Run workflow, ili push oznake v* (npr. v1.0.0).
 # Gotove datoteke su pod "Artifacts" na stranici izvršavanja.
 name: Build
@@ -22,6 +23,11 @@ jobs:
           - os: windows-latest
             script: dist
             files: dist/*.exe
+          - os: ubuntu-latest
+            script: dist:linux
+            files: |
+              dist/*.AppImage
+              dist/*.deb
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

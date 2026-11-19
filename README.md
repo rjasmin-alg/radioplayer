@@ -1,6 +1,6 @@
 # RadioPlayer
 
-Lokalni web player za internetski radio i WebSDR prijemnike. Radi na Windowsima (primarno) i Linuxu.
+Lokalni web player za internetski radio i WebSDR prijemnike. Radi na Windowsima, macOS-u i Linuxu.
 Nema vanjskih ovisnosti – treba samo [Node.js](https://nodejs.org) 18 ili noviji.
 
 ## Desktop aplikacija (Windows .exe)
@@ -24,7 +24,26 @@ npm run dist
 ```
 
 `npm run desktop` pokreće desktop verziju bez pakiranja (za razvoj), a `npm run icon` ponovno
-iscrtava `desktop/icon.png` iz `public/icon.svg`. Za Linux: `npm run dist:linux` (AppImage, gradi se na Linuxu).
+iscrtava `desktop/icon.png` iz `public/icon.svg`.
+
+## Desktop aplikacija (Linux)
+
+Gradi se na Linuxu (`npm install`, pa `npm run dist:linux`) ili preko GitHub Actionsa (vidi macOS niže).
+U `dist/` nastaju dvije inačice, obje za x64:
+
+- **`RadioPlayer-1.1.0-linux-amd64.deb`** – preporučeno za Ubuntu, Mint, Debian i slične:
+  `sudo apt install ./RadioPlayer-1.1.0-linux-amd64.deb`. Dodaje RadioPlayer u izbornik aplikacija i
+  sam postavlja AppArmor profil koji Electron treba na Ubuntu 24.04+.
+- **`RadioPlayer-1.1.0-linux-x86_64.AppImage`** – jedna datoteka bez instalacije, za ostale distribucije:
+  `chmod +x RadioPlayer-*.AppImage` i pokreni. Treba `libfuse2` (na Ubuntu 24.04: `sudo apt install libfuse2t64`).
+  Na Ubuntu 24.04+ AppArmor blokira Electronov sandbox, pa AppImage ne starta – tamo koristi `.deb`
+  (ili, ako baš mora, pokreni AppImage s `--no-sandbox`).
+
+- Minimiziranje skriva prozor u traku sa satom ako je radna površina ima (KDE, Cinnamon, XFCE, MATE,
+  Ubuntu GNOME). Čisti GNOME (npr. Fedora) nema traku, pa se tamo prozor obično minimizira na traku zadataka.
+  Ako ikona u traci ne reagira na lijevi klik, desni klik nudi „Prikaži RadioPlayer“.
+- Tipke za medije i kontrole u traci sustava rade preko MPRIS-a.
+- Podaci su u `~/.config/radioplayer/data`.
 
 ## Desktop aplikacija (macOS)
 
@@ -41,7 +60,7 @@ npm run dist:mac
 U `dist/` nastaju `RadioPlayer-1.0.0-mac-arm64.dmg` (Apple Silicon, M1–M4) i `…-mac-x64.dmg` (Intel), plus `.zip` inačice.
 
 **Preko GitHuba (bez Maca):** stavi projekt u GitHub repozitorij, pa Actions → „Build“ → *Run workflow*
-(ili push oznake `v1.0.0`). Workflow `.github/workflows/build.yml` gradi macOS i Windows verziju;
+(ili push oznake `v1.0.0`). Workflow `.github/workflows/build.yml` gradi macOS, Windows i Linux verziju;
 gotove datoteke su pod *Artifacts*.
 
 Aplikacija nije potpisana Apple Developer certifikatom niti notarizirana, pa je macOS pri prvom
@@ -82,7 +101,7 @@ Desktop verzija odmah prikazuje nazive kartica, a web verzija tek nakon klika na
 aplikacije (OpenWebRX, WebSDR) idu na zadani izlaz sustava.
 
 Player traka: vizualizator spektra, „trenutno svira“ (ICY metapodaci), automatsko gašenje,
-tipke za medije u Windowsima, razmaknica za play/pauzu.
+tipke za medije (Windows, macOS, Linux/MPRIS), razmaknica za play/pauzu.
 
 ## Izvori podataka
 

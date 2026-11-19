@@ -3,7 +3,9 @@
   "version": "1.1.0",
   "description": "Lokalni player za internetski radio i WebSDR prijemnike",
   "author": "Jasmin",
+  "homepage": "https://github.com/rjasmin-alg/radioplayer",
   "main": "desktop/main.js",
+  "desktopName": "radioplayer.desktop",
   "private": true,
   "scripts": {
     "start": "node server.js --open",
@@ -63,9 +65,23 @@
       "title": "RadioPlayer"
     },
     "linux": {
-      "target": "AppImage",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "desktop/icon.png",
-      "category": "Audio"
+      "category": "AudioVideo",
+      "executableName": "radioplayer",
+      "syncDesktopName": true,
+      "maintainer": "Jasmin",
+      "synopsis": "Player za internetski radio i WebSDR prijemnike",
+      "artifactName": "RadioPlayer-${version}-linux-${arch}.${ext}",
+      "desktop": {
+        "entry": {
+          "Name": "RadioPlayer",
+          "Keywords": "radio;stream;sdr;websdr;kiwisdr;"
+        }
+      }
     }
   },
   "devDependencies": {
