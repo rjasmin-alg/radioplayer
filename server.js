@@ -272,6 +272,114 @@ function icyTitle(url) {
   });
 }
 
+// ---------- dnevnik pjesama (songs.tsv) ----------
+// Svaka pjesma koju čuješ (ICY naslov) zapisuje se kao redak: vrijeme, stanica, pjesma, izvor.
+// Izvor je prazan za ono što si čuo, a "prije" za pjesme koje je stanica pustila prije nego što si se
+// uključio (SHOUTcast /played ili AzuraCast API – mnoge stanice to nemaju, npr. čisti Icecast).
+
+const songsPath = () => path.join(DATA, 'songs.tsv');
+let songsRecent = null;          // zadnjih ~500 zapisa u memoriji, za uklanjanje duplikata
+const songsLast = new Map();     // stanica -> zadnji zapisani naslov uživo
+
+function loadSongs() {
+  try {
+    return fs.readFileSync(songsPath(), 'utf8').split('\n').filter(Boolean).map((l) => {
+      const [time, station, title, source = ''] = l.split('\t');
+      return { t: Date.parse(time.replace(' ', 'T')), time, station, title, source };
+    }).filter((e) => e.title && !Number.isNaN(e.t));
+  } catch { return []; }
+}
+
+const cleanField = (s) => String(s || '').replace(/[\t\r\n]+/g, ' ').trim();
+const fmtTime = (ms) => {
+  const d = new Date(ms), p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
+const sameTitle = (a, b) => a.toLowerCase() === b.toLowerCase();
+
+function isJunkTitle(title, station) {
+  if (!title || !/[\p{L}\p{N}]/u.test(title)) return true;
+  return sameTitle(title, station);
+}
+
+// zapisuje pjesme (kronološkim redom); preskače one koje su već zapisane unutar ±20 min
+function logSongs(station, entries) {
+  if (!songsRecent) songsRecent = loadSongs().slice(-500);
+  const lines = [];
+  for (const e of entries.sort((a, b) => a.t - b.t)) {
+    const title = cleanField(e.title);
+    if (isJunkTitle(title, station)) continue;
+    if (songsRecent.some((r) => r.station === station && sameTitle(r.title, title) && Math.abs(r.t - e.t) < 20 * 60 * 1000)) continue;
+    const rec = { t: e.t, time: fmtTime(e.t), station, title, source: e.source || '' };
+    songsRecent.push(rec);
+    lines.push([rec.time, station, title, rec.source].join('\t') + '\n');
+  }
+  if (songsRecent.length > 600) songsRecent = songsRecent.slice(-500);
+  if (lines.length) fs.appendFile(songsPath(), lines.join(''), () => {});
+  return lines.length;
+}
+
+function logLiveSong(stationName, title) {
+  const station = cleanField(stationName) || 'Nepoznata stanica';
+  title = cleanField(title);
+  if (!title || songsLast.get(station) === title) return;
+  songsLast.set(station, title);
+  logSongs(station, [{ t: Date.now(), title }]);
+}
+
+// JSON s ograničenom veličinom: krivi endpoint na SHOUTcast v1 poslužitelju može vratiti sam audio stream
+async function fetchJSONSmall(url, { maxBytes = 512 * 1024, timeout = 6000 } = {}) {
+  const { res } = await fetchRaw(url, { timeout, headers: { 'User-Agent': 'Mozilla/5.0 ' + UA } });
+  const type = res.headers['content-type'] || '';
+  if (res.statusCode >= 400 || !/json/i.test(type)) { res.destroy(); throw new Error('nije JSON'); }
+  const chunks = []; let size = 0;
+  for await (const c of res) {
+    size += c.length;
+    if (size > maxBytes) { res.destroy(); throw new Error('prevelik odgovor'); }
+    chunks.push(c);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+// AzuraCast: /listen/<shortcode>/... ili /radio/<port>/<mount> (tada prema nazivu mounta)
+async function azuraHistory(u) {
+  const listen = /^\/listen\/([^/]+)\//.exec(u.pathname);
+  let st;
+  if (listen) {
+    st = await fetchJSONSmall(`${u.origin}/api/nowplaying/${encodeURIComponent(listen[1])}`);
+  } else {
+    const radio = /^\/radio\/\d+(\/[^/?#;]+)/.exec(u.pathname);
+    if (!radio) return null;
+    const all = await fetchJSONSmall(`${u.origin}/api/nowplaying`, { maxBytes: 4 * 1024 * 1024 });
+    const hits = (Array.isArray(all) ? all : []).filter((s) => (s.station?.mounts || []).some((m) => m.path === radio[1]));
+    if (hits.length !== 1) return null; // nema ili je dvosmisleno (npr. više stanica s /radio.mp3)
+    st = hits[0];
+  }
+  if (!st || !Array.isArray(st.song_history)) return null;
+  return st.song_history.map((h) => ({ t: h.played_at * 1000, title: h.song?.text || [h.song?.artist, h.song?.title].filter(Boolean).join(' - ') }));
+}
+
+// SHOUTcast v2: /played?sid=N&type=json – prvi zapis je pjesma koja upravo svira, nju bilježi slušanje uživo
+async function shoutcastHistory(u) {
+  const sid = u.searchParams.get('sid') || (/stream\/(\d+)/.exec(u.pathname) || [])[1] || '1';
+  const list = await fetchJSONSmall(`${u.origin}/played?sid=${sid}&type=json`);
+  if (!Array.isArray(list) || !list.length || !('playedat' in list[0])) return null;
+  return list.slice(1).map((h) => ({ t: h.playedat * 1000, title: h.title }));
+}
+
+async function backfillSongs(url, stationName) {
+  const station = cleanField(stationName) || 'Nepoznata stanica';
+  let u;
+  try { u = new URL(await resolveStream(url)); } catch { return 0; }
+  for (const source of [azuraHistory, shoutcastHistory]) {
+    try {
+      const hist = await source(u);
+      if (hist && hist.length) return logSongs(station, hist.filter((h) => h.t && h.t < Date.now()).map((h) => ({ ...h, source: 'prije' })));
+    } catch {}
+  }
+  return 0;
+}
+
 // ---------- lokalna pohrana (favoriti, vlastite stanice, postavke) ----------
 
 const STORES = new Set(['favorites', 'custom', 'settings', 'memories', 'history']);
@@ -339,7 +447,20 @@ const server = http.createServer(async (req, res) => {
       const url = u.searchParams.get('url');
       if (!isHttpUrl(url)) return sendJSON(res, 400, { error: 'neispravan URL' });
       const info = await cached('np:' + url, 15000, () => icyTitle(url));
+      // log=1: zapiši pjesmu u songs.tsv; start=1 (prvi upit nakon uključivanja): dohvati i ranije pjesme
+      const station = u.searchParams.get('station');
+      if (u.searchParams.get('log') && station) {
+        if (info && info.title) logLiveSong(station, info.title);
+        if (u.searchParams.get('start')) backfillSongs(url, station).catch(() => {});
+      }
       return sendJSON(res, 200, info || {});
+    }
+
+    if (p === '/api/songs') {
+      const limit = Math.min(Number(u.searchParams.get('limit')) || 100, 5000);
+      const entries = loadSongs().sort((a, b) => b.t - a.t).slice(0, limit)
+        .map(({ time, station, title, source }) => ({ time, station, title, source }));
+      return sendJSON(res, 200, { path: songsPath(), entries });
     }
 
     if (p.startsWith('/api/store/')) {

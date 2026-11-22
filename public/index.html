@@ -211,6 +211,10 @@
       </form>
       <h2 class="sub">Nedavno slušano</h2>
       <div class="list" id="history-list"></div>
+      <h2 class="sub">Pjesme koje sam čuo</h2>
+      <div class="filters"><input id="songs-filter" type="search" placeholder="Traži pjesmu ili stanicu"></div>
+      <div class="songs" id="songs-list"></div>
+      <p class="muted small" id="songs-path"></p>
     </section>
 
     <!-- POSTAVKE -->
@@ -224,6 +228,7 @@
         </label>
         <label class="check"><input type="checkbox" id="set-proxy"> Reproduciraj preko lokalnog proxyja (omogućuje vizualizator; preporučeno)</label>
         <label class="check"><input type="checkbox" id="set-viz"> Prikaži vizualizator spektra</label>
+        <label class="check"><input type="checkbox" id="set-songs"> Zapisuj pjesme koje čujem (Favoriti → Pjesme koje sam čuo)</label>
         <label>Audio izlaz (zvučna kartica)
           <span class="row">
             <select id="set-audio-out"><option value="">Zadano (izlaz sustava)</option></select>

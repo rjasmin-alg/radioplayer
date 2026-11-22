@@ -156,3 +156,13 @@ h2.sub { margin-top: 22px; color: var(--muted); font-weight: 600; }
   .list { grid-template-columns: 1fr; }
   .freq-display input { width: 180px; font-size: 26px; }
 }
+
+/* pjesme koje sam čuo */
+.songs { display: flex; flex-direction: column; gap: 2px; max-height: 480px; overflow-y: auto; }
+.song { display: grid; grid-template-columns: 6.5em 1fr minmax(0, 14em); gap: 10px; align-items: baseline; padding: 5px 10px; border-radius: 6px; background: var(--bg2); cursor: copy; min-width: 0; }
+.song:hover { background: var(--bg3); }
+.song .when { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.song .what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song .where { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.song.earlier .what { color: var(--muted); }
+@media (max-width: 600px) { .song { grid-template-columns: 4.5em 1fr; } .song .where { grid-column: 2; text-align: left; } }

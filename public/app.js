@@ -239,9 +239,22 @@ const player = {
     this.addHistory(st);
     this.mediaMeta(st.name, '');
     if (!isHls) {
-      const poll = () => api('/api/nowplaying?url=' + encodeURIComponent(url)).then((np) => {
+      // uz log=1 poslužitelj zapisuje pjesme u songs.tsv; prvi upit (start=1) dohvaća i ranije puštene pjesme
+      let first = true;
+      const npUrl = () => {
+        const q = new URLSearchParams({ url });
+        if (state.settings.logSongs !== false) {
+          q.set('log', '1'); q.set('station', st.name || '');
+          if (first) q.set('start', '1');
+        }
+        first = false;
+        return '/api/nowplaying?' + q;
+      };
+      const poll = () => api(npUrl()).then((np) => {
         if (this.current !== st) return;
         const t = np && np.title;
+        if (t && t !== this.lastNpTitle && state.settings.logSongs !== false && $('#view-favorites').classList.contains('active')) setTimeout(renderSongs, 500);
+        this.lastNpTitle = t;
         $('#p-title').textContent = t || [st.codec, st.bitrate && st.bitrate + ' kbps'].filter(Boolean).join(' · ') || 'Uživo';
         this.mediaMeta(st.name, t || '');
       }).catch(() => {});
@@ -858,6 +871,7 @@ function renderFavorites() {
   state.favorites.sdrs.forEach((r) => sb.appendChild(sdrItem({ ...r, dist: distanceKm(state.settings.lat, state.settings.lon, r.lat, r.lon) })));
   const hb = $('#history-list');
   renderStations(hb, state.history.slice(0, 20), { empty: 'Povijest je prazna.' });
+  renderSongs();
   const customBox = document.createElement('div');
   customBox.className = 'list';
   if (state.custom.length) {
@@ -870,6 +884,37 @@ function renderFavorites() {
       onDelete: (st) => { state.custom = state.custom.filter((c) => c.stationuuid !== st.stationuuid); save('custom'); renderFavorites(); },
     })));
   } else { $('#custom-list')?.remove(); $('#custom-title')?.remove(); }
+}
+
+// pjesme koje si čuo (data/songs.tsv); "prije" = pjesme koje je stanica pustila prije uključivanja
+let songsCache = [];
+async function renderSongs() {
+  const box = $('#songs-list');
+  try {
+    const r = await api('/api/songs?limit=1000');
+    songsCache = r.entries;
+    $('#songs-path').textContent = 'Zapisano u ' + r.path;
+  } catch { songsCache = []; }
+  drawSongs();
+}
+function drawSongs() {
+  const box = $('#songs-list');
+  const q = $('#songs-filter').value.trim().toLowerCase();
+  const list = (q ? songsCache.filter((e) => (e.title + ' ' + e.station).toLowerCase().includes(q)) : songsCache).slice(0, 200);
+  if (!list.length) {
+    box.innerHTML = `<p class="loading">${songsCache.length ? 'Nema pogodaka.' : 'Još nema zapisanih pjesama – bilježe se dok slušaš stanice koje šalju naslov pjesme.'}</p>`;
+    return;
+  }
+  const d = new Date(), p2 = (n) => String(n).padStart(2, '0');
+  const today = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  const when = (t) => (t.startsWith(today) ? t.slice(11, 16) : `${t.slice(8, 10)}.${t.slice(5, 7)}. ${t.slice(11, 16)}`);
+  box.innerHTML = list.map((e) => `<div class="song${e.source ? ' earlier' : ''}" title="Klikni za kopiranje naslova">
+    <span class="when">${esc(when(e.time))}</span>
+    <span class="what">${esc(e.title)}</span>
+    <span class="where">${esc(e.station)}${e.source ? ' · prije' : ''}</span></div>`).join('');
+  [...box.children].forEach((row, i) => {
+    row.onclick = () => navigator.clipboard.writeText(list[i].title).then(() => toast('Naslov kopiran.'), () => {});
+  });
 }
 
 // ---------- AUDIO IZLAZ ----------
@@ -958,7 +1003,7 @@ const audioOut = {
 function initSettings() {
   const s = state.settings;
   $('#set-lat').value = s.lat ?? ''; $('#set-lon').value = s.lon ?? '';
-  $('#set-proxy').checked = s.proxy; $('#set-viz').checked = s.viz;
+  $('#set-proxy').checked = s.proxy; $('#set-viz').checked = s.viz; $('#set-songs').checked = s.logSongs !== false;
   $('#set-country').onchange = (e) => { s.country = e.target.value; save('settings'); $('#local-country').value = s.country; loadLocal(); };
   const loc = () => {
     s.lat = Number($('#set-lat').value); s.lon = Number($('#set-lon').value); save('settings');
@@ -970,6 +1015,8 @@ function initSettings() {
     () => toast('Lokaciju nije moguće odrediti.'));
   $('#set-proxy').onchange = (e) => { s.proxy = e.target.checked; save('settings'); };
   $('#set-viz').onchange = (e) => { s.viz = e.target.checked; save('settings'); };
+  $('#set-songs').onchange = (e) => { s.logSongs = e.target.checked; save('settings'); };
+  $('#songs-filter').oninput = drawSongs;
   $('#set-export').onclick = () => {
     const blob = new Blob([JSON.stringify({ favorites: state.favorites, custom: state.custom, memories: state.memories }, null, 1)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'radioplayer-favoriti.json'; a.click();

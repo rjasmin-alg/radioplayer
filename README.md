@@ -103,6 +103,14 @@ aplikacije (OpenWebRX, WebSDR) idu na zadani izlaz sustava.
 Player traka: vizualizator spektra, „trenutno svira“ (ICY metapodaci), automatsko gašenje,
 tipke za medije (Windows, macOS, Linux/MPRIS), razmaknica za play/pauzu.
 
+**Pjesme koje sam čuo:** dok slušaš stanicu koja šalje naslov pjesme (ICY), svaka nova pjesma se zapisuje
+u `songs.tsv` u mapi s podacima (desktop na Linuxu: `~/.config/radioplayer/data/songs.tsv`). Redak je
+`vrijeme  stanica  pjesma  izvor`, odvojeno tabulatorom. Pri uključivanju stanice aplikacija pokušava
+dohvatiti i pjesme puštene prije toga – to rade SHOUTcast poslužitelji (`/played`, obično zadnjih 10–20)
+i AzuraCast (npr. Yammat, zadnjih 5); takvi redovi imaju izvor `prije`. Čisti Icecast (npr. Otvoreni, HRT)
+nema povijest, pa se tamo bilježi samo ono što čuješ. Popis s pretragom je u kartici Favoriti (klik kopira
+naslov), a zapisivanje se gasi u Postavkama.
+
 ## Izvori podataka
 
 - Radio stanice: [radio-browser.info](https://www.radio-browser.info) – besplatna, otvorena baza besplatnih streamova.
