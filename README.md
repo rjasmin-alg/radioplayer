@@ -31,10 +31,10 @@ iscrtava `desktop/icon.png` iz `public/icon.svg`.
 Gradi se na Linuxu (`npm install`, pa `npm run dist:linux`) ili preko GitHub Actionsa (vidi macOS niže).
 U `dist/` nastaju dvije inačice, obje za x64:
 
-- **`RadioPlayer-1.1.1-linux-amd64.deb`** – preporučeno za Ubuntu, Mint, Debian i slične:
-  `sudo apt install ./RadioPlayer-1.1.1-linux-amd64.deb`. Dodaje RadioPlayer u izbornik aplikacija i
+- **`RadioPlayer-1.2.0-linux-amd64.deb`** – preporučeno za Ubuntu, Mint, Debian i slične:
+  `sudo apt install ./RadioPlayer-1.2.0-linux-amd64.deb`. Dodaje RadioPlayer u izbornik aplikacija i
   sam postavlja AppArmor profil koji Electron treba na Ubuntu 24.04+.
-- **`RadioPlayer-1.1.1-linux-x86_64.AppImage`** – jedna datoteka bez instalacije, za ostale distribucije:
+- **`RadioPlayer-1.2.0-linux-x86_64.AppImage`** – jedna datoteka bez instalacije, za ostale distribucije:
   `chmod +x RadioPlayer-*.AppImage` i pokreni. Treba `libfuse2` (na Ubuntu 24.04: `sudo apt install libfuse2t64`).
   Na Ubuntu 24.04+ AppArmor blokira Electronov sandbox, pa AppImage ne starta – tamo koristi `.deb`
   (ili, ako baš mora, pokreni AppImage s `--no-sandbox`).
